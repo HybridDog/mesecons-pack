@@ -25,29 +25,36 @@ minetest.register_craft({
 
 -- GHOSTSTONE
 
+local get = vector.get_data_from_pos
+local set = vector.set_data_to_pos
+
 local function get_tab(pos, func)
-	local todo,n = {pos},1
-	local tab_avoid = {[pos.x.." "..pos.y.." "..pos.z] = true}
+	local z,y,x = vector.unpack(pos)
+	local todo,n = {{z,y,x}},1
+	local tab_avoid = {}
+	set(tab_avoid, z,y,x, true)
 	local tab_done,num = {pos},2
 	while n do
-		local p = todo[n]
+		local z,y,x = unpack(todo[n])
 		todo[n] = nil
 		n = nil
 
 		for i = -1,1,2 do
-			for _,p2 in pairs({
-				{x=p.x+i, y=p.y, z=p.z},
-				{x=p.x, y=p.y+i, z=p.z},
-				{x=p.x, y=p.y, z=p.z+i},
+			for _,c in pairs({
+				{z+i, y, x},
+				{z, y+i, x},
+				{z, y, x+i},
 			}) do
-				local pstr = p2.x.." "..p2.y.." "..p2.z
-				if not tab_avoid[pstr]
-				and func(p2) then
-					tab_avoid[pstr] = true
-					tab_done[num] = p2
-					num = num+1
-					n = #todo+1
-					todo[n] = p2
+				local z,y,x = unpack(c)
+				if not get(tab_avoid, z,y,x) then
+					set(tab_avoid, z,y,x, true)
+					local p2 = {x=x, y=y, z=z}
+					if func(p2) then
+						tab_done[num] = p2
+						num = num+1
+						n = #todo+1
+						todo[n] = c
+					end
 				end
 			end
 		end
@@ -186,7 +193,7 @@ minetest.register_node("mesecons_random:ghoststone_active", {
 
 
 minetest.register_craft({
-	output = 'mesecons_random:ghoststone 4',
+	output = "mesecons_random:ghoststone 4",
 	recipe = {
 		{"default:steel_ingot", "default:cobble", "default:steel_ingot"},
 		{"default:cobble", "group:mesecon_conductor_craftable", "default:cobble"},
