@@ -26,29 +26,33 @@ minetest.register_craft({
 -- GHOSTSTONE
 
 local function get_tab(pos, func)
-	local tab = {pos}
+	local todo,n = {pos},1
 	local tab_avoid = {[pos.x.." "..pos.y.." "..pos.z] = true}
 	local tab_done,num = {pos},2
-	while tab[1] do
-		for n,p in pairs(tab) do
-			for i = -1,1,2 do
-				for _,p2 in pairs({
-					{x=p.x+i, y=p.y, z=p.z},
-					{x=p.x, y=p.y+i, z=p.z},
-					{x=p.x, y=p.y, z=p.z+i},
-				}) do
-					local pstr = p2.x.." "..p2.y.." "..p2.z
-					if not tab_avoid[pstr]
-					and func(p2) then
-						tab_avoid[pstr] = true
-						tab_done[num] = p2
-						num = num+1
-						table.insert(tab, p2)
-					end
+	while n do
+		local p = todo[n]
+		todo[n] = nil
+		n = nil
+
+		for i = -1,1,2 do
+			for _,p2 in pairs({
+				{x=p.x+i, y=p.y, z=p.z},
+				{x=p.x, y=p.y+i, z=p.z},
+				{x=p.x, y=p.y, z=p.z+i},
+			}) do
+				local pstr = p2.x.." "..p2.y.." "..p2.z
+				if not tab_avoid[pstr]
+				and func(p2) then
+					tab_avoid[pstr] = true
+					tab_done[num] = p2
+					num = num+1
+					n = #todo+1
+					todo[n] = p2
 				end
 			end
-			tab[n] = nil
 		end
+
+		n = n or next(todo)
 	end
 	return tab_done
 end
@@ -63,6 +67,8 @@ end
 
 local c = {}
 local function update_ghoststones(pos, func, name)
+	--local t1 = os.clock()
+
 	func = func or is_ghoststone
 	name = name or "mesecons_random:ghoststone_active"
 	local tab = get_tab(pos, func)
@@ -98,7 +104,7 @@ local function update_ghoststones(pos, func, name)
 	manip:set_data(nodes)
 	manip:write_to_map()
 	manip:update_map()
-	--print(string.format("[mesecons] ghostblocks updated after ca. %.2fs", os.clock() - --t1))
+	--print(string.format("[mesecons_random] ghostblocks updated after ca. %.2fs", os.clock() - t1))
 end
 
 minetest.register_node("mesecons_random:ghoststone", {
