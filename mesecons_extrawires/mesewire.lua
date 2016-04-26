@@ -16,21 +16,27 @@ minetest.override_item("default:mese", {
 	}}
 })
 
--- Copy node definition of powered mese from normal mese
--- and brighten texture tiles to indicate mese is powered
-local powered_def = mesecon.mergetable(minetest.registered_nodes["default:mese"], {
-	drop = "default:mese",
-	light_source = 5,
-	mesecons = {conductor = {
-		state = mesecon.state.on,
-		offstate = "default:mese",
-		rules = mesewire_rules
-	}},
-	groups = {cracky = 1, not_in_creative_inventory = 1}
-})
+local to_copy = {"use_texture_alpha", "post_effect_color", "walkable",
+	"pointable", "diggable", "climbable", "buildable_to", "light_source",
+	"damage_per_second", "sounds", "drawtype", "paramtype", "paramtype2",
+	"sunlight_propagates", "is_ground_content"}
 
-for i, v in pairs(powered_def.tiles) do
-	powered_def.tiles[i] = v .. "^[brighten"
+local origdef = minetest.registered_nodes["default:mese"]
+local def = {}
+for _,i in pairs(to_copy) do
+	def[i] = rawget(origdef, i)
 end
+def.tiles = {}
+for i,v in pairs(origdef.tiles) do
+	def.tiles[i] = v .. "^[brighten"
+end
+def.drop = "default:mese"
+def.groups = table.copy(origdef.groups)
+def.groups.not_in_creative_inventory = 1
+def.mesecons = {conductor = {
+	state = mesecon.state.on,
+	offstate = "default:mese",
+	rules = mesewire_rules
+}}
 
-minetest.register_node("mesecons_extrawires:mese_powered", powered_def)
+minetest.register_node("mesecons_extrawires:mese_powered", def)
