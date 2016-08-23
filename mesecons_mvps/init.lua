@@ -53,6 +53,16 @@ function mesecon.mvps_process_stack(stack)
 	end
 end
 
+-- gets a node even if unloaded
+local function hard_get_node(pos)
+	local node = minetest.get_node_or_nil(pos)
+	if not node then
+		minetest.get_voxel_manip():read_from_map(pos, pos)
+		node = minetest.get_node(pos)
+	end
+	return node
+end
+
 -- tests if the node can be pushed into, e.g. air, water, grass
 local function node_replaceable(name)
 	if name == "ignore" then return true end
@@ -66,26 +76,30 @@ end
 
 function mesecon.mvps_get_stack(pos, dir, maximum, all_pull_sticky)
 	-- determine the number of nodes to be pushed
-	local nodes = {}
+	local nodes,n = {},1
 	local frontiers = {pos}
 
 	while #frontiers > 0 do
 		local np = frontiers[1]
-		local nn = minetest.get_node(np)
+		local nn = hard_get_node(np)
 
 		if not node_replaceable(nn.name) then
-			table.insert(nodes, {node = nn, pos = np})
-			if #nodes > maximum then return nil end
+			nodes[n] = {node = nn, pos = np}
+			if n > maximum then
+				return
+			end
 
 			-- add connected nodes to frontiers, connected is a vector list
 			-- the vectors must be absolute positions
-			local connected = {}
+			local connected,nc = {},1
 			if minetest.registered_nodes[nn.name]
 			and minetest.registered_nodes[nn.name].mvps_sticky then
 				connected = minetest.registered_nodes[nn.name].mvps_sticky(np, nn)
+				nc = #connected+1
 			end
 
-			table.insert(connected, vector.add(np, dir))
+			connected[nc] = vector.add(np, dir)
+			nc = nc+1
 
 			-- If adjacent node is sticky block and connects add that
 			-- position to the connected table
@@ -100,34 +114,43 @@ function mesecon.mvps_get_stack(pos, dir, maximum, all_pull_sticky)
 					-- connects to this position?
 					for _, link in ipairs(sticksto) do
 						if vector.equals(link, np) then
-							table.insert(connected, adjpos)
+							connected[nc] = adjpos
+							nc = nc+1
+							--break
 						end
 					end
 				end
 			end
 
 			if all_pull_sticky then
-				table.insert(connected, vector.subtract(np, dir))
+				connected[nc] = vector.subtract(np, dir)
+				nc = nc+1
 			end
 
 			-- Make sure there are no duplicates in frontiers / nodes before
 			-- adding nodes in "connected" to frontiers
-			for _, cp in ipairs(connected) do
-				local duplicate = false
-				for _, rp in ipairs(nodes) do
-					if vector.equals(cp, rp.pos) then
+			for i = 1, nc-1 do
+				local cp = connected[i]
+				local duplicate
+				for i = 1, n do
+					if vector.equals(cp, nodes[i].pos) then
 						duplicate = true
-					end
-				end
-				for _, fp in ipairs(frontiers) do
-					if vector.equals(cp, fp) then
-						duplicate = true
+						break
 					end
 				end
 				if not duplicate then
-					table.insert(frontiers, cp)
+					for _, fp in ipairs(frontiers) do
+						if vector.equals(cp, fp) then
+							duplicate = true
+							break
+						end
+					end
+				end
+				if not duplicate then
+					frontiers[#frontiers+1] = cp
 				end
 			end
+			n = n+1
 		end
 		table.remove(frontiers, 1)
 	end
