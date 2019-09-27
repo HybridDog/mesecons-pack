@@ -92,8 +92,17 @@ function mesecon.get_any_inputrules(node)
 end
 
 function mesecon.get_any_rules(node)
-	return mesecon.mergetable(mesecon.get_any_inputrules(node) or {},
-		mesecon.get_any_outputrules(node) or {})
+	rules_in = mesecon.get_any_inputrules(node)
+	rules_out = mesecon.get_any_outputrules(node)
+	if not rules_in then
+		return rules_out or {}
+	end
+	if not rules_out then
+		return rules_in
+	end
+	rules = table.copy(rules_in)
+	table.insert_all(rules, rules_out)
+	return rules
 end
 
 -- Receptors
