@@ -193,40 +193,12 @@ function mesecon.tablecopy(obj) -- deep copy
 	return obj
 end
 
-function mesecon.cmpAny(t1, t2, seen1, seen2)
-	if type(t1) ~= type(t2) then
-		return false
-	end
-	if type(t1) ~= "table" then
-		return t1 == t2
-	end
+function mesecon.cmpAny(t1, t2)
+	if type(t1) ~= type(t2) then return false end
+	if type(t1) ~= "table" and type(t2) ~= "table" then return t1 == t2 end
 
-	-- Test if t2's keys are a subset of t1's keys
-	for k in pairs(t2) do
-		if t1[k] == nil then
-			return false
-		end
-	end
-
-	-- Test if all values in t1 are the same as those in t2
-	seen1 = seen1 or {}
-	seen2 = seen2 or {}
-	for i, v in pairs(t1) do
-		-- Do not crash with recursive tables
-		if not seen1[v] then
-			if seen2[t2[i]] then
-				-- t2[i] leads to a cycle but t[i] does not (yet)
-				return false
-			end
-			seen1[v] = true
-			seen2[t2[i]] = true
-			if not mesecon.cmpAny(v, t2[i], seen1, seen2) then
-				return false
-			end
-		elseif not seen2[t2[i]] then
-			-- t[i] leads to a cycle but t2[i] does not
-			return false
-		end
+	for i, e in pairs(t1) do
+		if not mesecon.cmpAny(e, t2[i]) then return false end
 	end
 
 	return true
